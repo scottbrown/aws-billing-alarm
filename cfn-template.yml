@@ -1,0 +1,59 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Enables billing alarms and thresholds"
+
+Parameters:
+  AccountName:
+    Type: String
+    Description: "The name on this account"
+  MaxMonthlyExpenseInDollars:
+    Type: Number
+    Description: >
+      The maximum dollars to spend in the account per month before an
+      alarm is triggered.
+    Default: 1000
+  RecipientEmailAddress:
+    Type: String
+    Description: >
+      The email recipient of any billing alarms.
+
+Resources:
+  Alarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlertingTopic
+      AlarmDescription: >
+        Alarm for billing overusage of this account.
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      EvaluationPeriods: 1
+      MetricName: EstimatedCharges
+      Namespace: "AWS/Billing"
+      OKActions:
+        - !Ref AlertingTopic
+      Period: 21600   # 6 hours
+      Statistic: Maximum
+      Threshold: !Ref MaxMonthlyExpenseInDollars
+
+  AlertingTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName: !Sub "Billing Alert for ${AccountName} Account"
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref RecipientEmailAddress
+
+Outputs:
+  AlarmArn:
+    Description: "ARN of the Cloudwatch Billing Alarm"
+    Value: !Ref Alarm
+  AlertTopicArn:
+    Description: "ARN of the SNS topic receiving billing alerts"
+    Value: !Ref AlertingTopic
+    Export:
+      Name: "billing-alerts:sns:arn"
+
