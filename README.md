@@ -13,7 +13,7 @@ topic ARN.
 
 ## Requirements
 
-* Ansible 2.2 (used for orchestrating the stack)
+* `make`
 * AWS access
 * Permission to create/delete CloudFormation stacks, SNS topics, and
 CloudWatch alarms.
@@ -29,21 +29,14 @@ Given some values for `EMAIL_ADDRESS`, `ACCOUNT_NAME`, and `MAX_DOLLARS`
 you launch the stack with the following command:
 
 ```
-$ ansible-playbook -i localhost.inventory -e 'recipient_email=EMAIL_ADDRESS account_name=ACCOUNT_NAME max_expense_in_dollars=MAX_DOLLARS' create-stack.yml
-
-PLAY [all] *********************************************************************
-
-TASK [load project settings] ***************************************************
-ok: [localhost]
-
-TASK [ensure cloudformation stack is created or deleted] ***********************
-changed: [localhost]
-
-PLAY RECAP *********************************************************************
-localhost                  : ok=2    changed=1    unreachable=0    failed=0
+$ make create-stack RECIPIENT_EMAIL=EMAIL_ADDRESS ACCOUNT_NAME=ACCOUNT_NAME MAX_EXPENSE_IN_DOLLARS=MAX_DOLLARS AWS_PROFILE=example-profile
+{
+  "StackId": "..."
+}
 ```
 
-Once Ansible is complete, the stack has been created.
+The stack is created asynchronously.  It's status can be checked by
+calling: `make status`
 
 Take note that the SNS topic subscription will need to be confirmed, which
 arrives as an email to the email address's inbox specified in the call to

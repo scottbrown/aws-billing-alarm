@@ -10,6 +10,9 @@ stack.owner := security
 stack.lifetime := long
 # / #
 
+# DO NOT CHANGE -- billing alarms only reside here
+stack.region := us-east-1
+
 help: ## show this message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
@@ -33,11 +36,13 @@ ifndef MAX_EXPENSE_IN_DOLLARS
 	@echo "Provide a MAX_EXPENSE_IN_DOLLARS to continue."; exit 1
 endif
 
-create-stack: get-profile get-account get-email get-budget ## create the stack in the given AWS_PROFILE
-	aws cloudformation create-stack --stack-name $(stack.name) --template-body file://cfn-template.yml --parameters ParameterKey=AccountName,ParameterValue=$(ACCOUNT_NAME) ParameterKey=RecipientEmailAddress,ParameterValue=$(RECIPIENT_EMAIL) ParameterKey=MaxMonthlyExpenseInDollars,ParameterValue=$(MAX_EXPENSE_IN_DOLLARS) --tags Key=project,Value=$(project.name) Key=owner,Value=$(stack.owner) Key=repository,Value=$(project.repo) Key=lifetime,Value=$(stack.lifetime) --enable-termination-protection --region us-east-1 --profile $(AWS_PROFILE) --stack-policy-body file://cfn-policy.json
+create-stack: get-profile get-account get-email get-budget ## launch the stack in AWS
+	@aws cloudformation create-stack --stack-name $(stack.name) --template-body file://cfn-template.yml --parameters ParameterKey=AccountName,ParameterValue=$(ACCOUNT_NAME) ParameterKey=RecipientEmailAddress,ParameterValue=$(RECIPIENT_EMAIL) ParameterKey=MaxMonthlyExpenseInDollars,ParameterValue=$(MAX_EXPENSE_IN_DOLLARS) --tags Key=project,Value=$(project.name) Key=owner,Value=$(stack.owner) Key=repository,Value=$(project.repo) Key=lifetime,Value=$(stack.lifetime) --enable-termination-protection --region $(stack.region) --profile $(AWS_PROFILE) --stack-policy-body file://cfn-policy.json
 
 # Removing stack termination protection must be a manual operation to
 # prevent accidents.
-delete-stack: get-profile ## delete the stack
-	aws cloudformation delete-stack --stack-name $(stack.name) --region us-east-1 --profile $(AWS_PROFILE)
+delete-stack: get-profile ## delete the stack from AWS
+	@aws cloudformation delete-stack --stack-name $(stack.name) --region $(stack.region) --profile $(AWS_PROFILE)
 
+status: get-profile ## display the latest status of the stack
+	@aws cloudformation describe-stack-events --profile $(AWS_PROFILE) --region $(stack.region) --stack-name $(stack.name) --query 'StackEvents[?ResourceType == `AWS::CloudFormation::Stack`] | [0]'
